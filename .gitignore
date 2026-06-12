@@ -1,0 +1,14 @@
+# Build artifacts
+build/
+test_outputs/
+
+# Local portable developer tools
+tools/
+
+# Generated simulation outputs
+results/data/*
+results/figures/*
+
+# Keep output directories in the working tree when placeholder files are added later.
+!results/data/.gitkeep
+!results/figures/.gitkeep
