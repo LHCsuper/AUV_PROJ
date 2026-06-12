@@ -1,4 +1,4 @@
-# AUV Project
+# AUV_PROJ
 
 This repository is for local AUV project notes, research materials, simulations, and related development work.
 
@@ -6,7 +6,7 @@ This repository is for local AUV project notes, research materials, simulations,
 
 - `MdReader/`: Markdown reading and research workspace.
 - `MdReader/.obsidian/`: Obsidian workspace configuration.
-- `MdReader/文献调研/`: Literature review materials.
+- Literature review materials are stored under the `MdReader/` workspace.
 
 ## Workflow
 
