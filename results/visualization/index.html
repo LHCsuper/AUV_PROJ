@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AUV 仿真可视化报告</title>
+  <style>
+    body { margin: 0; font-family: Arial, "Microsoft YaHei", sans-serif; color: #172033; background: #f7f8fb; }
+    header { padding: 34px 42px 22px; background: #ffffff; border-bottom: 1px solid #d9dee8; }
+    main { max-width: 1080px; margin: 0 auto; padding: 26px 24px 44px; }
+    h1 { margin: 0 0 8px; font-size: 30px; }
+    .subtitle { margin: 0; color: #5b6472; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card { display: block; padding: 20px; background: #ffffff; border: 1px solid #d9dee8; border-radius: 8px; text-decoration: none; color: inherit; }
+    .card:hover { border-color: #2563eb; box-shadow: 0 8px 22px rgba(37, 99, 235, 0.12); }
+    .card h2 { margin: 0 0 10px; font-size: 20px; }
+    .card p { min-height: 48px; margin: 0 0 14px; color: #5b6472; line-height: 1.55; }
+    .card span { color: #1d4ed8; font-weight: 600; }
+    .note { margin-top: 22px; color: #5b6472; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AUV 仿真可视化报告</h1>
+    <p class="subtitle">LOS + PID 路径跟随第一版展示结果</p>
+  </header>
+  <main>
+    <div class="grid">
+      
+      <a class="card" href="straight_path_report.html">
+        <h2>直线路径跟随</h2>
+        <p>基础 LOS + PID 闭环收敛验证</p>
+        <span>打开报告</span>
+      </a>
+      <a class="card" href="circle_path_report.html">
+        <h2>圆形路径跟随</h2>
+        <p>连续曲线路径跟随能力验证</p>
+        <span>打开报告</span>
+      </a>
+      <a class="card" href="s_curve_path_report.html">
+        <h2>S 形路径跟随</h2>
+        <p>连续转向路径跟随能力验证</p>
+        <span>打开报告</span>
+      </a>
+    </div>
+    <p class="note">报告由 <code>scripts/batch_generate_reports.py</code> 生成，数据来自 <code>test_outputs/</code> 或 <code>results/data/</code>。</p>
+  </main>
+</body>
+</html>

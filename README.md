@@ -181,7 +181,68 @@ X_cmd, N_cmd
 - `heading_error`：航向误差
 - `X_cmd, N_cmd`：纵向推力和偏航力矩控制输入
 
-## 9. 推荐运行顺序
+## 9. 生成可视化 HTML 报告
+
+当前项目已经提供第一版可视化脚本，可以从 CSV 数据生成浏览器可打开的 HTML 报告。
+
+先确认已经生成路径跟随 CSV：
+
+```powershell
+cd E:\AUV_proj
+.\build\cmake\test_path_following.exe
+.\build\cmake\test_curved_path_following.exe
+```
+
+然后一键生成全部可视化报告：
+
+```powershell
+py scripts\batch_generate_reports.py
+```
+
+生成结果位于：
+
+```text
+results/visualization/index.html
+results/visualization/straight_path_report.html
+results/visualization/circle_path_report.html
+results/visualization/s_curve_path_report.html
+```
+
+推荐直接打开总入口：
+
+```text
+E:\AUV_proj\results\visualization\index.html
+```
+
+每个报告包含：
+
+- 场景信息表
+- summary 指标表
+- AUV 实际轨迹与参考路径
+- 横向路径误差
+- 航向误差和航向角
+- 纵向速度
+- 控制输入及限幅线
+- 每幅图的简短含义说明
+- 横纵坐标名称、单位、刻度数字和网格线
+
+当前可视化脚本使用 Python 标准库生成离线 HTML，不依赖 pandas/Plotly，方便在当前环境直接运行。后续如果安装 Plotly，可以继续升级为 Plotly 交互图表。
+
+轨迹图坐标含义：
+
+```text
+横坐标：x, inertial-frame position [m]
+纵坐标：y, inertial-frame position [m]
+```
+
+时间序列图坐标含义：
+
+```text
+横坐标：time, simulation time [s]
+纵坐标：对应物理量，例如横向误差、航向误差、速度、推力或偏航力矩
+```
+
+## 10. 推荐运行顺序
 
 如果只是想快速确认项目是否正常：
 
@@ -207,7 +268,19 @@ test_outputs/circle_path_following.csv
 test_outputs/s_curve_path_following.csv
 ```
 
-## 10. 常见问题
+如果想生成 HTML 展示报告：
+
+```powershell
+py scripts\batch_generate_reports.py
+```
+
+然后打开：
+
+```text
+results/visualization/index.html
+```
+
+## 11. 常见问题
 
 ### 找不到 `cmake.exe`
 
@@ -246,6 +319,17 @@ g++ --version
 ```text
 build/cmake/test_outputs/
 ```
+
+### `python` 命令无法运行
+
+当前环境中可以优先使用 Python Launcher：
+
+```powershell
+py --version
+py scripts\batch_generate_reports.py
+```
+
+如果 `py` 也不可用，再检查本机 Python 安装和环境变量。
 
 ### 修改代码后结果没变化
 

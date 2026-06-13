@@ -5,6 +5,10 @@ test_outputs/
 # Local portable developer tools
 tools/
 
+# Python caches
+__pycache__/
+*.pyc
+
 # Generated simulation outputs
 results/data/*
 results/figures/*
