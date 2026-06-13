@@ -14,8 +14,10 @@ set(AUV_LOCAL_EIGEN_DIR
 
 add_library(auv_core STATIC
     src/actuator/saturation.cpp
+    src/controller/path_following_controller.cpp
     src/environment/current_model.cpp
     src/guidance/los_guidance.cpp
+    src/guidance/reference_path.cpp
     src/model/auv_3dof_model.cpp
     src/controller/pid_controller.cpp
     src/controller/speed_controller.cpp
@@ -118,3 +120,21 @@ add_executable(test_los_guidance
 )
 target_link_libraries(test_los_guidance PRIVATE auv_core)
 add_test(NAME test_los_guidance COMMAND test_los_guidance)
+
+add_executable(test_reference_paths
+    tests/test_reference_paths.cpp
+)
+target_link_libraries(test_reference_paths PRIVATE auv_core)
+add_test(NAME test_reference_paths COMMAND test_reference_paths)
+
+add_executable(test_path_following
+    tests/test_path_following.cpp
+)
+target_link_libraries(test_path_following PRIVATE auv_core)
+add_test(NAME test_path_following COMMAND test_path_following)
+
+add_executable(test_curved_path_following
+    tests/test_curved_path_following.cpp
+)
+target_link_libraries(test_curved_path_following PRIVATE auv_core)
+add_test(NAME test_curved_path_following COMMAND test_curved_path_following)
