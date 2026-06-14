@@ -1,6 +1,10 @@
 # Build artifacts
 build/
 test_outputs/
+web/node_modules/
+web/dist/
+web/release/
+web/*.log
 
 # Local portable developer tools
 tools/

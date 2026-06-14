@@ -1,0 +1,47 @@
+{
+  "name": "auv-visualization-app",
+  "version": "0.1.0",
+  "description": "AUV single-vehicle control visualization desktop app",
+  "author": "AUV_PROJ",
+  "private": true,
+  "type": "module",
+  "main": "electron-main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "preview:local": "vite preview --host 127.0.0.1 --port 4173",
+    "electron:dev": "npm run build && electron .",
+    "electron:pack": "npm run build && electron-builder --dir",
+    "electron:dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.auvproj.visualization",
+    "productName": "AUV Visualization",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.cjs",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "dir"
+      ]
+    },
+    "electronDist": "node_modules/electron/dist"
+  },
+  "dependencies": {
+    "echarts": "^6.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.3",
+    "vite": "^8.0.16"
+  }
+}

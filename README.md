@@ -242,7 +242,164 @@ E:\AUV_proj\results\visualization\index.html
 纵坐标：对应物理量，例如横向误差、航向误差、速度、推力或偏航力矩
 ```
 
-## 10. 推荐运行顺序
+## 10. 运行可操作可视化 APP
+
+当前项目已经开始提供面向交付展示的可操作 Web APP，位置在：
+
+```text
+web/
+```
+
+APP 当前支持：
+
+- 工程交付首页
+- 已完成模块展示
+- 控制算法流程展示
+- 直线、圆形、S 形场景切换
+- AUV 2D 动画回放
+- 播放、暂停、重置、时间滑条、倍速控制
+- 实时状态面板
+- 轨迹图、误差图、速度图和控制输入图
+
+### 10.1 生成 APP 数据
+
+如果 C++ 仿真结果发生变化，先重新生成 CSV：
+
+```powershell
+cd E:\AUV_proj
+.\build\cmake\test_path_following.exe
+.\build\cmake\test_curved_path_following.exe
+```
+
+再将 CSV 转换为 Web APP 使用的 JSON：
+
+```powershell
+py scripts\convert_simulation_csv_to_json.py --input test_outputs\straight_line_path_following.csv --output web\public\data\straight.json --scenario straight
+py scripts\convert_simulation_csv_to_json.py --input test_outputs\circle_path_following.csv --output web\public\data\circle.json --scenario circle
+py scripts\convert_simulation_csv_to_json.py --input test_outputs\s_curve_path_following.csv --output web\public\data\s_curve.json --scenario s_curve
+```
+
+### 10.2 开发模式运行
+
+在本机调试 APP 时执行：
+
+```powershell
+cd E:\AUV_proj\web
+npm run dev -- --port 5173
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:5173
+```
+
+### 10.3 离线打包
+
+生成离线静态文件：
+
+```powershell
+cd E:\AUV_proj\web
+npm run build
+```
+
+生成目录：
+
+```text
+web/dist/
+```
+
+其中包含：
+
+```text
+web/dist/index.html
+web/dist/assets/
+web/dist/data/
+```
+
+`web/dist/data/` 中包含三个演示场景的数据：
+
+```text
+straight.json
+circle.json
+s_curve.json
+```
+
+### 10.4 断网环境展示
+
+断网环境下，推荐用本机静态服务打开：
+
+```powershell
+cd E:\AUV_proj\web\dist
+py -m http.server 8000
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:8000
+```
+
+这不需要访问外网，所有 JS、CSS 和数据都来自本地 `web/dist/`。
+
+如果后续要给甲方拷贝演示，只需要带上：
+
+```text
+web/dist/
+```
+
+并在演示电脑上用本地服务打开即可。后续也可以将该目录封装为 Electron 桌面程序，实现双击运行。
+
+### 10.5 封装 Windows 桌面程序
+
+当前项目已经提供 Electron 桌面封装配置。先确保 APP 可以正常构建：
+
+```powershell
+cd E:\AUV_proj\web
+npm run build
+```
+
+然后生成 Windows 目录版桌面程序：
+
+```powershell
+npm run electron:pack
+```
+
+生成结果位于：
+
+```text
+web/release/win-unpacked/
+```
+
+可执行程序为：
+
+```text
+web/release/win-unpacked/AUV Visualization.exe
+```
+
+这个目录版程序不需要联网，内部已经包含打包后的前端页面和演示数据。给甲方演示时，需要整体拷贝 `win-unpacked/` 文件夹，不要只单独拷贝 `.exe`。
+
+Electron 相关依赖安装在：
+
+```text
+web/node_modules/
+```
+
+Electron 下载缓存位于：
+
+```text
+tools/electron-cache/
+```
+
+electron-builder 缓存位于：
+
+```text
+tools/electron-builder-cache/
+```
+
+这些目录都在项目 E 盘目录下，不需要安装到 C 盘，也不需要全局安装。
+
+## 11. 推荐运行顺序
 
 如果只是想快速确认项目是否正常：
 
@@ -280,7 +437,42 @@ py scripts\batch_generate_reports.py
 results/visualization/index.html
 ```
 
-## 11. 常见问题
+如果想运行可操作 Web APP：
+
+```powershell
+cd E:\AUV_proj\web
+npm run dev -- --port 5173
+```
+
+如果想离线打包可操作 Web APP：
+
+```powershell
+cd E:\AUV_proj\web
+npm run build
+cd dist
+py -m http.server 8000
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:8000
+```
+
+如果想生成桌面版程序：
+
+```powershell
+cd E:\AUV_proj\web
+npm run electron:pack
+```
+
+然后运行：
+
+```text
+web/release/win-unpacked/AUV Visualization.exe
+```
+
+## 12. 常见问题
 
 ### 找不到 `cmake.exe`
 
