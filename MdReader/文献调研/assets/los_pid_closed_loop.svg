@@ -1,0 +1,38 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="980" height="460" viewBox="0 0 980 460">
+  <rect width="980" height="460" fill="#f8fafc"/>
+  <text x="490" y="45" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="27" font-weight="700" fill="#0f172a">LOS + PID 路径跟随基础闭环</text>
+  <text x="490" y="78" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="15" fill="#475569">由路径跟随文献中的 LOS 制导思想和工程基线 PID 控制结构重新绘制</text>
+  <g font-family="Microsoft YaHei, SimHei, Arial" font-size="16" fill="#0f172a">
+    <rect x="55" y="170" width="130" height="70" rx="10" fill="#dbeafe" stroke="#60a5fa"/>
+    <text x="120" y="199" text-anchor="middle" font-weight="700">参考路径</text>
+    <text x="120" y="222" text-anchor="middle" font-size="13" fill="#475569">直线/圆形/S 形</text>
+    <rect x="230" y="160" width="150" height="90" rx="10" fill="#dcfce7" stroke="#4ade80"/>
+    <text x="305" y="195" text-anchor="middle" font-weight="700">LOS 制导</text>
+    <text x="305" y="219" text-anchor="middle" font-size="13" fill="#475569">横向误差 → ψd</text>
+    <rect x="425" y="160" width="150" height="90" rx="10" fill="#fef3c7" stroke="#fbbf24"/>
+    <text x="500" y="195" text-anchor="middle" font-weight="700">航向 PID</text>
+    <text x="500" y="219" text-anchor="middle" font-size="13" fill="#475569">ψd - ψ → N</text>
+    <rect x="620" y="160" width="150" height="90" rx="10" fill="#fee2e2" stroke="#f87171"/>
+    <text x="695" y="195" text-anchor="middle" font-weight="700">速度 PI/PID</text>
+    <text x="695" y="219" text-anchor="middle" font-size="13" fill="#475569">ud - u → X</text>
+    <rect x="810" y="150" width="130" height="110" rx="10" fill="#ede9fe" stroke="#a78bfa"/>
+    <text x="875" y="189" text-anchor="middle" font-weight="700">3-DOF AUV</text>
+    <text x="875" y="213" text-anchor="middle" font-size="13" fill="#475569">x,y,ψ,u,v,r</text>
+    <text x="875" y="236" text-anchor="middle" font-size="13" fill="#475569">输出状态</text>
+    <rect x="355" y="325" width="270" height="58" rx="10" fill="#0f766e"/>
+    <text x="490" y="350" text-anchor="middle" font-weight="700" fill="#ffffff">数据输出与可视化</text>
+    <text x="490" y="372" text-anchor="middle" font-size="13" fill="#dffcf5">轨迹、误差、速度、控制输入曲线</text>
+  </g>
+  <g stroke="#64748b" stroke-width="2.5" fill="none" marker-end="url(#arrow)">
+    <path d="M185 205 L230 205"/>
+    <path d="M380 205 L425 205"/>
+    <path d="M575 195 L620 195"/>
+    <path d="M770 205 L810 205"/>
+    <path d="M875 260 C875 315 690 354 625 354"/>
+    <path d="M355 354 C265 350 230 290 260 248"/>
+    <path d="M875 150 C835 105 330 105 305 160"/>
+  </g>
+  <text x="585" y="118" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="13" fill="#64748b">当前位置与航向反馈</text>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker></defs>
+</svg>
+

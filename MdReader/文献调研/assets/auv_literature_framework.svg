@@ -1,0 +1,41 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="980" height="560" viewBox="0 0 980 560">
+  <rect width="980" height="560" fill="#f8fafc"/>
+  <text x="490" y="48" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="28" font-weight="700" fill="#0f172a">AUV 单体控制算法文献主题框架</text>
+  <text x="490" y="82" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="15" fill="#475569">依据 Fossen 建模框架、AUV 轨迹跟踪综述与鲁棒控制相关文献重新绘制</text>
+  <rect x="382" y="232" width="216" height="92" rx="14" fill="#0f766e"/>
+  <text x="490" y="270" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="24" font-weight="700" fill="#ffffff">AUV 单体控制</text>
+  <text x="490" y="298" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="15" fill="#dffcf5">建模 · 控制 · 仿真 · 展示</text>
+  <g font-family="Microsoft YaHei, SimHei, Arial" font-size="17" fill="#0f172a">
+    <rect x="80" y="130" width="220" height="74" rx="10" fill="#e0f2fe" stroke="#7dd3fc"/>
+    <text x="190" y="160" text-anchor="middle" font-weight="700">动力学建模</text>
+    <text x="190" y="185" text-anchor="middle" font-size="14" fill="#475569">6-DOF / 3-DOF / 参数不确定</text>
+    <rect x="80" y="360" width="220" height="74" rx="10" fill="#dcfce7" stroke="#86efac"/>
+    <text x="190" y="390" text-anchor="middle" font-weight="700">路径跟随与轨迹跟踪</text>
+    <text x="190" y="415" text-anchor="middle" font-size="14" fill="#475569">LOS · 横向误差 · 航向跟踪</text>
+    <rect x="380" y="115" width="220" height="74" rx="10" fill="#fef3c7" stroke="#fcd34d"/>
+    <text x="490" y="145" text-anchor="middle" font-weight="700">经典基线控制</text>
+    <text x="490" y="170" text-anchor="middle" font-size="14" fill="#475569">PID / PI / PD · 易实现</text>
+    <rect x="680" y="130" width="220" height="74" rx="10" fill="#fee2e2" stroke="#fca5a5"/>
+    <text x="790" y="160" text-anchor="middle" font-weight="700">鲁棒与抗扰控制</text>
+    <text x="790" y="185" text-anchor="middle" font-size="14" fill="#475569">SMC · ADRC · DOB · ESO</text>
+    <rect x="680" y="360" width="220" height="74" rx="10" fill="#ede9fe" stroke="#c4b5fd"/>
+    <text x="790" y="390" text-anchor="middle" font-weight="700">优化与约束控制</text>
+    <text x="790" y="415" text-anchor="middle" font-size="14" fill="#475569">MPC / NMPC · 输入约束 · 能耗</text>
+    <rect x="380" y="380" width="220" height="74" rx="10" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="490" y="410" text-anchor="middle" font-weight="700">可视化与交付</text>
+    <text x="490" y="435" text-anchor="middle" font-size="14" fill="#475569">轨迹回放 · 曲线 · 离线 APP</text>
+  </g>
+  <g stroke="#64748b" stroke-width="2.2" fill="none" marker-end="url(#arrow)">
+    <path d="M300 167 C345 190 360 230 382 256"/>
+    <path d="M300 397 C345 370 360 330 382 300"/>
+    <path d="M490 189 L490 232"/>
+    <path d="M680 167 C635 190 620 230 598 256"/>
+    <path d="M680 397 C635 370 620 330 598 300"/>
+    <path d="M490 380 L490 324"/>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+</svg>

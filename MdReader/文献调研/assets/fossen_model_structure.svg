@@ -1,0 +1,42 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="980" height="520" viewBox="0 0 980 520">
+  <rect width="980" height="520" fill="#f8fafc"/>
+  <text x="490" y="45" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="27" font-weight="700" fill="#0f172a">Fossen 海洋航行器动力学模型结构</text>
+  <text x="490" y="78" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="15" fill="#475569">由 6-DOF 矩阵-向量模型重新绘制，用于说明本项目 3-DOF 降阶模型的来源</text>
+  <rect x="170" y="118" width="640" height="72" rx="12" fill="#0f172a"/>
+  <text x="490" y="153" text-anchor="middle" font-family="Consolas, Microsoft YaHei" font-size="24" font-weight="700" fill="#ffffff">Mν̇ + C(ν)ν + D(ν)ν + g(η) = τ</text>
+  <text x="490" y="177" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="14" fill="#cbd5e1">动力学方程与运动学方程 η̇ = J(η)ν 共同构成 AUV 仿真模型</text>
+  <g font-family="Microsoft YaHei, SimHei, Arial">
+    <rect x="70" y="250" width="160" height="96" rx="10" fill="#dbeafe" stroke="#60a5fa"/>
+    <text x="150" y="284" text-anchor="middle" font-size="20" font-weight="700" fill="#1e3a8a">Mν̇</text>
+    <text x="150" y="312" text-anchor="middle" font-size="15" fill="#334155">惯性项</text>
+    <text x="150" y="334" text-anchor="middle" font-size="13" fill="#64748b">刚体惯性 + 附加质量</text>
+    <rect x="260" y="250" width="160" height="96" rx="10" fill="#fef3c7" stroke="#fbbf24"/>
+    <text x="340" y="284" text-anchor="middle" font-size="20" font-weight="700" fill="#92400e">C(ν)ν</text>
+    <text x="340" y="312" text-anchor="middle" font-size="15" fill="#334155">科氏/向心项</text>
+    <text x="340" y="334" text-anchor="middle" font-size="13" fill="#64748b">速度耦合与非线性</text>
+    <rect x="450" y="250" width="160" height="96" rx="10" fill="#dcfce7" stroke="#4ade80"/>
+    <text x="530" y="284" text-anchor="middle" font-size="20" font-weight="700" fill="#166534">D(ν)ν</text>
+    <text x="530" y="312" text-anchor="middle" font-size="15" fill="#334155">阻尼项</text>
+    <text x="530" y="334" text-anchor="middle" font-size="13" fill="#64748b">线性/非线性水动力</text>
+    <rect x="640" y="250" width="160" height="96" rx="10" fill="#ede9fe" stroke="#a78bfa"/>
+    <text x="720" y="284" text-anchor="middle" font-size="20" font-weight="700" fill="#5b21b6">g(η)</text>
+    <text x="720" y="312" text-anchor="middle" font-size="15" fill="#334155">恢复力项</text>
+    <text x="720" y="334" text-anchor="middle" font-size="13" fill="#64748b">重力与浮力</text>
+    <rect x="830" y="250" width="110" height="96" rx="10" fill="#fee2e2" stroke="#f87171"/>
+    <text x="885" y="284" text-anchor="middle" font-size="22" font-weight="700" fill="#991b1b">τ</text>
+    <text x="885" y="312" text-anchor="middle" font-size="15" fill="#334155">控制输入</text>
+    <text x="885" y="334" text-anchor="middle" font-size="13" fill="#64748b">推力/力矩</text>
+  </g>
+  <rect x="244" y="400" width="492" height="56" rx="12" fill="#0f766e"/>
+  <text x="490" y="434" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="18" font-weight="700" fill="#ffffff">本项目基础模型降阶为水平面 3-DOF：[x, y, ψ, u, v, r]</text>
+  <g stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M490 190 L150 250"/>
+    <path d="M490 190 L340 250"/>
+    <path d="M490 190 L530 250"/>
+    <path d="M490 190 L720 250"/>
+    <path d="M490 190 L885 250"/>
+    <path d="M490 346 L490 400"/>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker></defs>
+</svg>
+

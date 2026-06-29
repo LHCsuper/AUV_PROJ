@@ -4,31 +4,55 @@ import * as echarts from 'echarts';
 const SCENARIOS = [
   {
     id: 'straight',
-    title: '直线路径跟随能力',
+    title: '直线路径跟随',
     file: './data/straight.json',
     tag: '基础路径任务'
   },
   {
     id: 'circle',
-    title: '圆形路径跟随能力',
+    title: '圆形路径跟随',
     file: './data/circle.json',
     tag: '连续转向任务'
   },
   {
     id: 's_curve',
-    title: 'S 形路径跟随能力',
+    title: 'S 形路径跟随',
     file: './data/s_curve.json',
     tag: '连续机动任务'
   }
 ];
 
-const MODULES = [
-  ['3-DOF 仿真模型', '水平面欠驱动 AUV 运动仿真'],
-  ['LOS 路径制导', '根据参考路径生成期望航向'],
-  ['航向 PID 控制', '输出偏航力矩控制航向误差'],
-  ['速度控制', '输出纵向推力维持航速'],
-  ['执行器限幅', '约束推力和偏航力矩命令'],
-  ['可视化展示', '展示轨迹、状态和控制结果']
+const ACCEPTANCE_RULES = [
+  {
+    key: 'steadyMaxAbsCrossTrackError',
+    label: '稳态最大横向误差',
+    unit: 'm',
+    threshold: '< 1.5 m',
+    pass: (value) => value < 1.5
+  },
+  {
+    key: 'meanSpeed',
+    label: '平均航速',
+    unit: 'm/s',
+    threshold: '1.0 ± 0.1 m/s',
+    pass: (value) => Math.abs(value - 1.0) <= 0.1
+  },
+  {
+    key: 'xSaturationRatio',
+    label: '推力饱和比例',
+    unit: '%',
+    threshold: '< 5%',
+    pass: (value) => value < 0.05,
+    formatter: formatPercent
+  },
+  {
+    key: 'nSaturationRatio',
+    label: '偏航力矩饱和比例',
+    unit: '%',
+    threshold: '< 5%',
+    pass: (value) => value < 0.05,
+    formatter: formatPercent
+  }
 ];
 
 function formatNumber(value, digits = 3) {
@@ -45,6 +69,68 @@ function formatPercent(value) {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+function radToDeg(value) {
+  return (value ?? 0) * 180 / Math.PI;
+}
+
+function computeDerivedMetrics(data) {
+  if (!data?.series?.length) {
+    return {};
+  }
+
+  const series = data.series;
+  const start = series[0];
+  const end = series[series.length - 1];
+  const duration = end.time - start.time;
+  const steadyStartTime = start.time + duration * 0.3;
+  const steadySamples = series.filter((point) => point.time >= steadyStartTime);
+  const absErrors = steadySamples.map((point) => Math.abs(point.crossTrackError));
+  const steadyMax = Math.max(...absErrors);
+  const convergenceThreshold = 0.5;
+  const convergence = findConvergenceTime(series, convergenceThreshold);
+  const dt = series.length > 1 ? series[1].time - series[0].time : 0;
+  const inputSmoothness = series.slice(1).reduce((sum, point, index) => {
+    const prev = series[index];
+    return sum + Math.abs(point.xCommand - prev.xCommand) + Math.abs(point.nCommand - prev.nCommand);
+  }, 0);
+
+  return {
+    initialCrossTrackError: Math.abs(start.crossTrackError),
+    steadyStartTime,
+    steadyMaxAbsCrossTrackError: steadyMax,
+    convergenceThreshold,
+    convergenceTime: convergence,
+    simulationDuration: duration,
+    timeStep: dt,
+    inputSmoothness
+  };
+}
+
+function findConvergenceTime(series, threshold) {
+  for (let index = 0; index < series.length; index += 1) {
+    const remainingStable = series.slice(index).every((point) => Math.abs(point.crossTrackError) <= threshold);
+    if (remainingStable) {
+      return series[index].time;
+    }
+  }
+  return null;
+}
+
+function makeEvaluationRows(summary, derived) {
+  const values = { ...summary, ...derived };
+  return ACCEPTANCE_RULES.map((rule) => {
+    const value = values[rule.key];
+    const status = rule.pass(value) ? '通过' : '警告';
+    const formatter = rule.formatter ?? ((number) => `${formatNumber(number)} ${rule.unit}`);
+    return {
+      label: rule.label,
+      value: formatter(value),
+      threshold: rule.threshold,
+      status
+    };
+  });
+}
+
 function TrajectoryChart({ data, sampleIndex }) {
   const chartRef = useRef(null);
 
@@ -59,46 +145,36 @@ function TrajectoryChart({ data, sampleIndex }) {
       .filter((point) => Number.isFinite(point.xRef) && Number.isFinite(point.yRef))
       .map((point) => [point.xRef, point.yRef]);
     const current = data.series[sampleIndex] ?? data.series[0];
-    const arrowLength = estimateArrowLength(data.series);
-    const arrowEnd = [
-      current.x + arrowLength * Math.cos(current.psi),
-      current.y + arrowLength * Math.sin(current.psi)
-    ];
 
     chart.setOption({
       animation: false,
       tooltip: {
-        trigger: 'axis',
+        trigger: 'item',
         valueFormatter: (value) => formatNumber(value, 3)
       },
       legend: {
         top: 4,
-        data: ['参考路径/最近参考点', 'AUV 实际轨迹']
+        data: ['参考路径', 'AUV 实际轨迹', '当前 AUV']
       },
-      grid: {
-        left: 70,
-        right: 28,
-        top: 56,
-        bottom: 64
-      },
+      grid: { left: 70, right: 30, top: 62, bottom: 62 },
       xAxis: {
         type: 'value',
         name: 'x 惯性系位置 [m]',
         nameLocation: 'middle',
         nameGap: 42,
-        splitLine: { lineStyle: { color: '#e5e8ef' } }
+        splitLine: { lineStyle: { color: '#e1e7ef' } }
       },
       yAxis: {
         type: 'value',
         name: 'y 惯性系位置 [m]',
         nameLocation: 'middle',
-        nameGap: 48,
-        splitLine: { lineStyle: { color: '#e5e8ef' } },
+        nameGap: 50,
+        splitLine: { lineStyle: { color: '#e1e7ef' } },
         scale: true
       },
       series: [
         {
-          name: '参考路径/最近参考点',
+          name: '参考路径',
           type: 'line',
           symbol: 'none',
           lineStyle: { width: 2, type: 'dashed', color: '#64748b' },
@@ -112,27 +188,13 @@ function TrajectoryChart({ data, sampleIndex }) {
           data: actual
         },
         {
-          name: '当前 AUV 位置',
+          name: '当前 AUV',
           type: 'scatter',
-          symbolSize: 14,
+          symbol: 'triangle',
+          symbolSize: 22,
+          symbolRotate: -radToDeg(current.psi) + 90,
           itemStyle: { color: '#dc2626' },
           data: [[current.x, current.y]]
-        },
-        {
-          name: '当前航向',
-          type: 'lines',
-          coordinateSystem: 'cartesian2d',
-          symbol: ['none', 'arrow'],
-          symbolSize: 12,
-          lineStyle: { width: 3, color: '#dc2626' },
-          data: [
-            {
-              coords: [
-                [current.x, current.y],
-                arrowEnd
-              ]
-            }
-          ]
         }
       ]
     });
@@ -145,10 +207,9 @@ function TrajectoryChart({ data, sampleIndex }) {
     };
   }, [data, sampleIndex]);
 
-  return <div ref={chartRef} className="chart" />;
+  return <div ref={chartRef} className="chart trajectory-chart" />;
 }
-
-function TimeSeriesChart({ data, sampleIndex, title, description, series, yAxisName }) {
+function TimeSeriesChart({ data, sampleIndex, title, series, yAxisName, markLines = [] }) {
   const chartRef = useRef(null);
 
   useEffect(() => {
@@ -158,6 +219,31 @@ function TimeSeriesChart({ data, sampleIndex, title, description, series, yAxisN
 
     const chart = echarts.init(chartRef.current);
     const currentTime = data.series[sampleIndex]?.time ?? 0;
+    const decoratedSeries = series.map((item, index) => ({
+      name: item.name,
+      type: 'line',
+      symbol: 'none',
+      lineStyle: {
+        width: item.width ?? 2,
+        color: item.color,
+        type: item.dashed ? 'dashed' : 'solid'
+      },
+      data: data.series.map((point) => [point.time, item.value(point)]),
+      markLine: index === 0
+        ? {
+            symbol: 'none',
+            label: { formatter: '{b}', color: '#991b1b' },
+            data: [
+              {
+                name: '当前时刻',
+                xAxis: currentTime,
+                lineStyle: { color: '#dc2626', width: 2 }
+              },
+              ...markLines
+            ]
+          }
+        : undefined
+    }));
 
     chart.setOption({
       animation: false,
@@ -166,56 +252,23 @@ function TimeSeriesChart({ data, sampleIndex, title, description, series, yAxisN
         valueFormatter: (value) => formatNumber(value, 3)
       },
       legend: { top: 4 },
-      grid: { left: 70, right: 28, top: 58, bottom: 64 },
+      grid: { left: 72, right: 28, top: 58, bottom: 64 },
       xAxis: {
         type: 'value',
-        name: 'time 仿真时间 [s]',
+        name: '仿真时间 t [s]',
         nameLocation: 'middle',
         nameGap: 42,
-        splitLine: { lineStyle: { color: '#e5e8ef' } }
+        splitLine: { lineStyle: { color: '#e1e7ef' } }
       },
       yAxis: {
         type: 'value',
         name: yAxisName,
         nameLocation: 'middle',
-        nameGap: 48,
-        splitLine: { lineStyle: { color: '#e5e8ef' } },
+        nameGap: 52,
+        splitLine: { lineStyle: { color: '#e1e7ef' } },
         scale: true
       },
-      series: series.map((item) => ({
-        name: item.name,
-        type: 'line',
-        symbol: 'none',
-        lineStyle: {
-          width: item.width ?? 2,
-          color: item.color,
-          type: item.dashed ? 'dashed' : 'solid'
-        },
-        data: data.series.map((point) => [point.time, item.value(point)])
-      })),
-      graphic: [
-        {
-          type: 'line',
-          shape: { x1: 0, y1: 0, x2: 0, y2: 1 },
-          invisible: true
-        }
-      ]
-    });
-
-    chart.setOption({
-      series: [
-        ...series.map((item) => ({
-          name: item.name,
-          markLine: item.markCurrent
-            ? {
-                symbol: 'none',
-                lineStyle: { color: '#dc2626', width: 2 },
-                label: { formatter: '当前时刻' },
-                data: [{ xAxis: currentTime }]
-              }
-            : undefined
-        }))
-      ]
+      series: decoratedSeries
     });
 
     const resize = () => chart.resize();
@@ -224,28 +277,16 @@ function TimeSeriesChart({ data, sampleIndex, title, description, series, yAxisN
       window.removeEventListener('resize', resize);
       chart.dispose();
     };
-  }, [data, sampleIndex, series, yAxisName]);
+  }, [data, sampleIndex, series, yAxisName, markLines]);
 
   return (
     <div className="chart-card">
       <div className="chart-copy">
         <h3>{title}</h3>
-        <p>{description}</p>
       </div>
       <div ref={chartRef} className="small-chart" />
     </div>
   );
-}
-
-function estimateArrowLength(series) {
-  if (!series?.length) {
-    return 1;
-  }
-  const xs = series.map((point) => point.x);
-  const ys = series.map((point) => point.y);
-  const xSpan = Math.max(...xs) - Math.min(...xs);
-  const ySpan = Math.max(...ys) - Math.min(...ys);
-  return Math.max(1, Math.max(xSpan, ySpan) * 0.04);
 }
 
 function ReplayControls({
@@ -297,167 +338,192 @@ function ReplayControls({
 
 function StatePanel({ sample }) {
   const rows = [
-    ['当前时间', `${formatNumber(sample?.time, 2)} s`],
-    ['x 位置', `${formatNumber(sample?.x)} m`],
-    ['y 位置', `${formatNumber(sample?.y)} m`],
-    ['航向角', `${formatNumber((sample?.psi ?? 0) * 180 / Math.PI)} deg`],
-    ['纵向速度 u', `${formatNumber(sample?.u)} m/s`],
-    ['横向误差', `${formatNumber(sample?.crossTrackError)} m`],
-    ['航向误差', `${formatNumber((sample?.headingError ?? 0) * 180 / Math.PI)} deg`],
-    ['纵向推力 X', `${formatNumber(sample?.xCommand)} N`],
-    ['偏航力矩 N', `${formatNumber(sample?.nCommand)} N*m`]
+    ['x', `${formatNumber(sample?.x)} m`],
+    ['y', `${formatNumber(sample?.y)} m`],
+    ['ψ', `${formatNumber(radToDeg(sample?.psi))}°`],
+    ['u', `${formatNumber(sample?.u)} m/s`],
+    ['r', `${formatNumber(radToDeg(sample?.r))} °/s`]
   ];
 
   return (
-    <div className="state-panel">
-      {rows.map(([label, value]) => (
-        <div key={label}>
-          <span>{label}</span>
-          <strong>{value}</strong>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function EngineeringNotes() {
-  return (
-    <section className="panel">
-      <h2>交付展示说明</h2>
-      <div className="note-grid">
-        <div>
-          <strong>模块已完成</strong>
-          <p>当前版本已经形成 AUV 单体控制算法链路，可完成路径制导、控制输入生成、仿真输出和可视化展示。</p>
-        </div>
-        <div>
-          <strong>展示方式</strong>
-          <p>APP 读取本地 JSON 数据，支持离线打包，适合在断网环境下进行甲方现场演示。</p>
-        </div>
-        <div>
-          <strong>当前阶段</strong>
-          <p>阶段四重点完善工程说明、状态指标和曲线图，为后续桌面封装和更丰富动画打基础。</p>
-        </div>
+    <section className="side-card">
+      <div className="panel-title-row dense-title">
+        <h3>当前状态</h3>
+        <span>{formatNumber(sample?.time, 2)} s</span>
+      </div>
+      <div className="state-panel">
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
       </div>
     </section>
   );
 }
 
-function ScenarioCharts({ data, sampleIndex }) {
+function ScenarioCharts({ data, sampleIndex, derived }) {
   const limits = data.limits ?? {};
-  const radToDeg = (value) => (value ?? 0) * 180 / Math.PI;
+  const convergenceThreshold = derived.convergenceThreshold ?? 0.5;
 
   return (
     <div className="chart-grid">
       <TimeSeriesChart
         data={data}
         sampleIndex={sampleIndex}
-        title="横向路径误差"
-        description="该图展示 AUV 相对参考路径的横向偏差，用于观察路径跟随是否逐渐稳定。"
-        yAxisName="cross-track error [m]"
+        title="横向路径误差 ey"
+        yAxisName="横向路径误差 ey [m]"
+        markLines={[
+          { name: '+收敛阈值', yAxis: convergenceThreshold, lineStyle: { color: '#f97316', type: 'dashed' } },
+          { name: '-收敛阈值', yAxis: -convergenceThreshold, lineStyle: { color: '#f97316', type: 'dashed' } }
+        ]}
         series={[
-          { name: '横向误差', color: '#2563eb', markCurrent: true, value: (point) => point.crossTrackError },
-          { name: '零误差参考', color: '#94a3b8', dashed: true, value: () => 0 }
+          { name: '横向路径误差 ey', color: '#2563eb', value: (point) => point.crossTrackError },
+          { name: '零误差线', color: '#94a3b8', dashed: true, value: () => 0 }
         ]}
       />
       <TimeSeriesChart
         data={data}
         sampleIndex={sampleIndex}
-        title="航向误差"
-        description="该图展示实际航向与 LOS 期望航向之间的误差，用于判断航向控制是否平稳。"
-        yAxisName="heading error [deg]"
+        title="航向误差 eψ"
+        yAxisName="航向误差 eψ [°]"
         series={[
-          { name: '航向误差', color: '#9333ea', markCurrent: true, value: (point) => radToDeg(point.headingError) },
-          { name: '零误差参考', color: '#94a3b8', dashed: true, value: () => 0 }
+          { name: '航向误差 eψ', color: '#9333ea', value: (point) => radToDeg(point.headingError) },
+          { name: '零误差线', color: '#94a3b8', dashed: true, value: () => 0 }
         ]}
       />
       <TimeSeriesChart
         data={data}
         sampleIndex={sampleIndex}
-        title="纵向速度"
-        description="该图展示 AUV 体坐标系纵向速度，用于检查速度控制是否保持稳定。"
-        yAxisName="surge speed u [m/s]"
+        title="纵向速度 u"
+        yAxisName="纵向速度 u [m/s]"
+        markLines={[
+          { name: '目标航速', yAxis: 1.0, lineStyle: { color: '#16a34a', type: 'dashed' } }
+        ]}
         series={[
-          { name: '纵向速度 u', color: '#16a34a', markCurrent: true, value: (point) => point.u }
+          { name: '纵向速度 u', color: '#16a34a', value: (point) => point.u }
         ]}
       />
       <TimeSeriesChart
         data={data}
         sampleIndex={sampleIndex}
-        title="纵向推力命令"
-        description="该图展示纵向推力命令和限幅线，用于判断推进输入是否长期饱和。"
-        yAxisName="X command [N]"
-        series={[
-          { name: 'X_cmd', color: '#0f766e', markCurrent: true, value: (point) => point.xCommand },
-          { name: 'X 上限', color: '#dc2626', dashed: true, value: () => limits.xCommandMax ?? 80 },
-          { name: 'X 下限', color: '#dc2626', dashed: true, value: () => limits.xCommandMin ?? -80 }
+        title="控制输入曲线"
+        yAxisName="控制输入 [N / N·m]"
+        markLines={[
+          { name: 'Xmax', yAxis: limits.xCommandMax ?? 80, lineStyle: { color: '#dc2626', type: 'dashed' } },
+          { name: 'Xmin', yAxis: limits.xCommandMin ?? -80, lineStyle: { color: '#dc2626', type: 'dashed' } },
+          { name: 'Nmax', yAxis: limits.nCommandMax ?? 20, lineStyle: { color: '#7c3aed', type: 'dashed' } },
+          { name: 'Nmin', yAxis: limits.nCommandMin ?? -20, lineStyle: { color: '#7c3aed', type: 'dashed' } }
         ]}
-      />
-      <TimeSeriesChart
-        data={data}
-        sampleIndex={sampleIndex}
-        title="偏航力矩命令"
-        description="该图展示偏航力矩命令和限幅线，用于判断转向控制输入是否平滑、是否触碰饱和。"
-        yAxisName="N command [N*m]"
         series={[
-          { name: 'N_cmd', color: '#7c3aed', markCurrent: true, value: (point) => point.nCommand },
-          { name: 'N 上限', color: '#dc2626', dashed: true, value: () => limits.nCommandMax ?? 20 },
-          { name: 'N 下限', color: '#dc2626', dashed: true, value: () => limits.nCommandMin ?? -20 }
+          { name: 'Xcmd 纵向推力', color: '#0f766e', value: (point) => point.xCommand },
+          { name: 'Ncmd', color: '#7c3aed', value: (point) => point.nCommand }
         ]}
       />
     </div>
   );
 }
 
-function SummaryCards({ summary }) {
-  const cards = [
-    ['RMS 横向误差', `${formatNumber(summary.rmsCrossTrackError)} m`],
-    ['最大横向误差', `${formatNumber(summary.maxAbsCrossTrackError)} m`],
-    ['平均航速', `${formatNumber(summary.meanSpeed)} m/s`],
-    ['最大推力命令', `${formatNumber(summary.maxAbsXCommand)} N`],
-    ['最大偏航力矩', `${formatNumber(summary.maxAbsNCommand)} N*m`],
-    ['推力饱和比例', formatPercent(summary.xSaturationRatio)]
+function AcceptancePanel({ rows }) {
+  return (
+    <div className="acceptance-panel">
+      <div className="panel-title-row">
+        <h3>验收指标判断</h3>
+      </div>
+      <div className="acceptance-table">
+        <div className="table-head">指标</div>
+        <div className="table-head">当前值</div>
+        <div className="table-head">阈值</div>
+        <div className="table-head">状态</div>
+        {rows.map((row) => (
+          <div className="table-row-group" key={row.label}>
+            <div className="table-row">{row.label}</div>
+            <div className="table-row numeric">{row.value}</div>
+            <div className="table-row">{row.threshold}</div>
+            <div className="table-row">
+              <span className={row.status === '通过' ? 'badge pass' : 'badge warn'}>{row.status}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getOverallStatus(rows) {
+  return rows.every((row) => row.status === '通过') ? '通过' : '警告';
+}
+
+function KeyResultPanel({ summary, evaluationRows }) {
+  const overallStatus = getOverallStatus(evaluationRows);
+  const items = [
+    ['控制输入峰值', `${formatNumber(summary.maxAbsXCommand)} N / ${formatNumber(summary.maxAbsNCommand)} N·m`],
+    ['饱和比例', `X ${formatPercent(summary.xSaturationRatio)} / N ${formatPercent(summary.nSaturationRatio)}`]
   ];
 
   return (
-    <div className="metric-grid">
-      {cards.map(([label, value]) => (
-        <div className="metric-card" key={label}>
-          <span>{label}</span>
-          <strong>{value}</strong>
-        </div>
-      ))}
-    </div>
+    <section className="side-card">
+      <div className="panel-title-row dense-title">
+        <h3>核心指标</h3>
+        <span className={overallStatus === '通过' ? 'badge pass' : 'badge warn'}>{overallStatus}</span>
+      </div>
+      <div className="key-metric-list">
+        {items.map(([label, value]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
-function ScenarioSelector({ selectedId, onSelect }) {
+function TopBar({ data, selectedScenario }) {
+  const scenarioName = data?.scenario?.name ?? selectedScenario?.title ?? '读取中';
+  const controller = data?.scenario?.controller ?? 'LOS + PID';
+  const status = data ? '正常' : '读取中';
+  const points = data?.series?.length ?? 0;
+
+  return (
+    <header className="top-bar">
+      <div className="project-title">
+        <span>AUV 单体控制算法模块及可视化</span>
+        <strong>AUV 单体控制算法仿真可视化系统</strong>
+      </div>
+      <div className="top-meta">
+        <div><span>当前场景</span><strong>{scenarioName}</strong></div>
+        <div><span>控制器</span><strong>{controller}</strong></div>
+        <div><span>运行状态</span><strong>{status}</strong></div>
+        <div><span>数据点数</span><strong>{points}</strong></div>
+      </div>
+    </header>
+  );
+}
+
+function ScenarioSelector({ selectedId, onSelect, scenarioSummaries }) {
   return (
     <div className="scenario-grid">
-      {SCENARIOS.map((scenario) => (
-        <button
-          className={scenario.id === selectedId ? 'scenario-card active' : 'scenario-card'}
-          key={scenario.id}
-          type="button"
-          onClick={() => onSelect(scenario.id)}
-        >
-          <span>{scenario.tag}</span>
-          <strong>{scenario.title}</strong>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function FlowDiagram() {
-  const nodes = ['参考路径', 'LOS 制导', '航向/速度控制', '执行器限幅', '3-DOF 模型', '状态输出', '可视化展示'];
-  return (
-    <div className="flow-row">
-      {nodes.map((node, index) => (
-        <div className="flow-item" key={node}>
-          <span>{node}</span>
-          {index < nodes.length - 1 && <b>→</b>}
-        </div>
-      ))}
+      {SCENARIOS.map((scenario) => {
+        const summary = scenarioSummaries[scenario.id];
+        return (
+          <button
+            className={scenario.id === selectedId ? 'scenario-card active' : 'scenario-card'}
+            key={scenario.id}
+            type="button"
+            onClick={() => onSelect(scenario.id)}
+          >
+            <span>{scenario.tag}</span>
+            <strong>{scenario.title}</strong>
+            {summary && (
+              <small>
+                推力饱和 {formatPercent(summary.xSaturationRatio)}
+              </small>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -465,6 +531,7 @@ function FlowDiagram() {
 export default function App() {
   const [selectedId, setSelectedId] = useState('straight');
   const [scenarioData, setScenarioData] = useState(null);
+  const [scenarioSummaries, setScenarioSummaries] = useState({});
   const [loadState, setLoadState] = useState('loading');
   const [sampleIndex, setSampleIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -474,6 +541,14 @@ export default function App() {
     () => SCENARIOS.find((scenario) => scenario.id === selectedId),
     [selectedId]
   );
+
+  useEffect(() => {
+    Promise.all(
+      SCENARIOS.map((scenario) => fetch(scenario.file).then((response) => response.json()).then((data) => [scenario.id, data.summary]))
+    )
+      .then((entries) => setScenarioSummaries(Object.fromEntries(entries)))
+      .catch(() => setScenarioSummaries({}));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -526,46 +601,21 @@ export default function App() {
   }, [isPlaying, playbackSpeed, scenarioData]);
 
   const currentSample = scenarioData?.series?.[sampleIndex] ?? null;
+  const derived = useMemo(() => computeDerivedMetrics(scenarioData), [scenarioData]);
+  const evaluationRows = useMemo(
+    () => (scenarioData ? makeEvaluationRows(scenarioData.summary, derived) : []),
+    [scenarioData, derived]
+  );
 
   return (
     <main className="app-shell">
-      <section className="hero">
-        <div>
-          <p className="eyebrow">AUV 单体控制算法模块及可视化</p>
-          <h1>工程交付展示 APP</h1>
-          <p className="summary">
-            本 APP 用于展示 AUV 单体控制算法模块已具备的路径制导、航向控制、
-            速度控制、执行器限幅、仿真输出和可视化能力。
-          </p>
+      <TopBar data={scenarioData} selectedScenario={selectedScenario} />
+
+      <section className="panel compact-panel">
+        <div className="panel-title-row">
+          <h2>场景切换</h2>
         </div>
-        <div className="hero-status">
-          <span>阶段二</span>
-          <strong>基础 APP 页面与数据读取</strong>
-        </div>
-      </section>
-
-      <section className="panel">
-        <h2>已完成模块</h2>
-        <div className="module-grid">
-          {MODULES.map(([title, text]) => (
-            <div className="module-card" key={title}>
-              <strong>{title}</strong>
-              <span>{text}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <h2>控制算法流程</h2>
-        <FlowDiagram />
-      </section>
-
-      <EngineeringNotes />
-
-      <section className="panel">
-        <h2>演示场景选择</h2>
-        <ScenarioSelector selectedId={selectedId} onSelect={setSelectedId} />
+        <ScenarioSelector selectedId={selectedId} onSelect={setSelectedId} scenarioSummaries={scenarioSummaries} />
       </section>
 
       <section className="panel">
@@ -573,49 +623,41 @@ export default function App() {
         {loadState === 'error' && <p className="notice error">场景数据读取失败，请检查 web/public/data 目录。</p>}
         {loadState === 'ready' && scenarioData && (
           <>
-            <div className="scenario-header">
-              <div>
-                <p className="eyebrow">当前演示</p>
-                <h2>{scenarioData.scenario.name}</h2>
-                <p className="summary">{scenarioData.scenario.description}</p>
-              </div>
-              <div className="status-stack">
-                <div className="status-pill">运行状态：{scenarioData.summary.status === 'normal' ? '正常' : scenarioData.summary.status}</div>
-                <div className="status-pill neutral">数据点：{scenarioData.series.length}</div>
-                <div className="status-pill neutral">控制器：{scenarioData.scenario.controller}</div>
-              </div>
+            <div className="dashboard-grid">
+              <section className="main-view">
+                <div className="chart-card main-trajectory">
+                  <div className="chart-copy">
+                    <h3>轨迹图 / 仿真回放主视图</h3>
+                  </div>
+                  <TrajectoryChart data={scenarioData} sampleIndex={sampleIndex} />
+                </div>
+                <ReplayControls
+                  isPlaying={isPlaying}
+                  playbackSpeed={playbackSpeed}
+                  sampleIndex={sampleIndex}
+                  totalSamples={scenarioData.series.length}
+                  currentSample={currentSample}
+                  onPlayPause={() => setIsPlaying((value) => !value)}
+                  onReset={() => {
+                    setSampleIndex(0);
+                    setIsPlaying(false);
+                  }}
+                  onSpeedChange={setPlaybackSpeed}
+                  onIndexChange={(value) => {
+                    setSampleIndex(value);
+                    setIsPlaying(false);
+                  }}
+                />
+              </section>
+
+              <aside className="dashboard-side">
+                <StatePanel sample={currentSample} />
+                <KeyResultPanel summary={scenarioData.summary} evaluationRows={evaluationRows} />
+                <AcceptancePanel rows={evaluationRows} />
+              </aside>
             </div>
-            <SummaryCards summary={scenarioData.summary} />
-            <ReplayControls
-              isPlaying={isPlaying}
-              playbackSpeed={playbackSpeed}
-              sampleIndex={sampleIndex}
-              totalSamples={scenarioData.series.length}
-              currentSample={currentSample}
-              onPlayPause={() => setIsPlaying((value) => !value)}
-              onReset={() => {
-                setSampleIndex(0);
-                setIsPlaying(false);
-              }}
-              onSpeedChange={setPlaybackSpeed}
-              onIndexChange={(value) => {
-                setSampleIndex(value);
-                setIsPlaying(false);
-              }}
-            />
-            <StatePanel sample={currentSample} />
-            <div className="chart-card">
-              <div className="chart-copy">
-                <h3>基础轨迹图</h3>
-                <p>该图展示 AUV 实际轨迹和参考路径/最近参考点，蓝色标记表示当前回放时刻的 AUV 位置，短箭头表示当前航向。</p>
-              </div>
-              <TrajectoryChart data={scenarioData} sampleIndex={sampleIndex} />
-            </div>
-            <ScenarioCharts data={scenarioData} sampleIndex={sampleIndex} />
-            <div className="conclusion">
-              <strong>演示结论</strong>
-              <p>{scenarioData.scenario.conclusion}</p>
-            </div>
+
+            <ScenarioCharts data={scenarioData} sampleIndex={sampleIndex} derived={derived} />
           </>
         )}
       </section>
